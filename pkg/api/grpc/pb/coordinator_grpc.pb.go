@@ -4,7 +4,7 @@
 // - protoc             v4.23.4
 // source: coordinator.proto
 
-package grpc
+package pb
 
 import (
 	context "context"

@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/pb"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/errors"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
@@ -12,19 +13,19 @@ import (
 )
 
 type coordinatorServer struct {
-	UnimplementedServiceServer
+	pb.UnimplementedServiceServer
 	coordinator mapreduce.Coordinator
 	log         logger.Logger
 }
 
-func NewCoordinator(coordinator mapreduce.Coordinator, log logger.Logger) ServiceServer {
+func NewCoordinator(coordinator mapreduce.Coordinator, log logger.Logger) pb.ServiceServer {
 	return &coordinatorServer{
 		coordinator: coordinator,
 		log:         log.Logger("CoordinatorGrpcServer"),
 	}
 }
 
-func (c *coordinatorServer) CreateMapTask(ctx context.Context, task *NewMapTask) (*MapTask, error) {
+func (c *coordinatorServer) CreateMapTask(ctx context.Context, task *pb.NewMapTask) (*pb.MapTask, error) {
 	if task == nil {
 		return nil, status.Error(codes.InvalidArgument, "request can't be nil")
 	}
@@ -32,13 +33,13 @@ func (c *coordinatorServer) CreateMapTask(ctx context.Context, task *NewMapTask)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
 	}
-	return &MapTask{
+	return &pb.MapTask{
 		Id:        t.ID,
 		InputFile: t.InputFile,
 	}, nil
 }
 
-func (c *coordinatorServer) CreateReduceTask(ctx context.Context, task *NewReduceTask) (*ReduceTask, error) {
+func (c *coordinatorServer) CreateReduceTask(ctx context.Context, task *pb.NewReduceTask) (*pb.ReduceTask, error) {
 	if task == nil {
 		return nil, status.Error(codes.InvalidArgument, "request can't be nil")
 	}
@@ -46,35 +47,35 @@ func (c *coordinatorServer) CreateReduceTask(ctx context.Context, task *NewReduc
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
 	}
-	return &ReduceTask{
+	return &pb.ReduceTask{
 		Id:         t.ID,
 		InputFiles: t.InputFiles,
 	}, nil
 }
 
-func (c *coordinatorServer) GetMapTask(ctx context.Context, empty *emptypb.Empty) (*MapTask, error) {
+func (c *coordinatorServer) GetMapTask(ctx context.Context, empty *emptypb.Empty) (*pb.MapTask, error) {
 	task, err := c.coordinator.GetMapTask(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
 	}
-	return &MapTask{
+	return &pb.MapTask{
 		Id:        task.ID,
 		InputFile: task.InputFile,
 	}, nil
 }
 
-func (c *coordinatorServer) GetReduceTask(ctx context.Context, empty *emptypb.Empty) (*ReduceTask, error) {
+func (c *coordinatorServer) GetReduceTask(ctx context.Context, empty *emptypb.Empty) (*pb.ReduceTask, error) {
 	task, err := c.coordinator.GetReduceTask(ctx)
 	if err != nil {
 		return nil, errors.ToGrpcError(err)
 	}
-	return &ReduceTask{
+	return &pb.ReduceTask{
 		Id:         task.ID,
 		InputFiles: task.InputFiles,
 	}, nil
 }
 
-func (c *coordinatorServer) ReportMapTaskResult(ctx context.Context, taskResult *MapTaskResult) (*emptypb.Empty, error) {
+func (c *coordinatorServer) ReportMapTaskResult(ctx context.Context, taskResult *pb.MapTaskResult) (*emptypb.Empty, error) {
 	if taskResult == nil {
 		return nil, status.Error(codes.InvalidArgument, "request can't be nil")
 	}
@@ -92,7 +93,7 @@ func (c *coordinatorServer) ReportMapTaskResult(ctx context.Context, taskResult 
 	return &emptypb.Empty{}, nil
 }
 
-func (c *coordinatorServer) ReportReduceTaskResult(ctx context.Context, taskResult *ReduceTaskResult) (*emptypb.Empty, error) {
+func (c *coordinatorServer) ReportReduceTaskResult(ctx context.Context, taskResult *pb.ReduceTaskResult) (*emptypb.Empty, error) {
 	if taskResult == nil {
 		return nil, status.Error(codes.InvalidArgument, "request can't be nil")
 	}

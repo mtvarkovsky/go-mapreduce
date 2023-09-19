@@ -1,6 +1,6 @@
 COORDINATOR_GRPC_API_DIR = ./api/coordinator/grpc
-COORDINATOR_GRPC_API_OUT = ./pkg/api/grpc
-MODULE_NAME=github.com/mtvarkosky/go-mapreduce/pkg/api/grpc
+COORDINATOR_GRPC_API_OUT = ./pkg/api/grpc/pb
+MODULE_NAME=github.com/mtvarkosky/go-mapreduce/pkg/api/grpc/pb
 
 BUILD_DIR=./build
 
@@ -13,7 +13,7 @@ protoc: ## install tools to generate code stubs from .proto files
 
 .PHONY: genproto
 genproto: protoc ## generate code stubs from .proto files
-	protoc --proto_path=${COORDINATOR_GRPC_API_DIR} --go_out=${COORDINATOR_GRPC_API_OUT} --go-grpc_out=${COORDINATOR_GRPC_API_OUT} --go_opt=module=${MODULE_NAME} --go-grpc_opt=module=${MODULE_NAME} ${COORDINATOR_GRPC_API_DIR}/*.proto
+	protoc --proto_path=${COORDINATOR_GRPC_API_DIR} --go_out=${COORDINATOR_GRPC_API_OUT} --go-grpc_out=${COORDINATOR_GRPC_API_OUT} --go_opt=Mcoordinator.proto=${MODULE_NAME} --go-grpc_opt=Mcoordinator.proto=${MODULE_NAME} ${COORDINATOR_GRPC_API_DIR}/coordinator.proto
 
 .PHONY: build-coordinator
 build-coordinator: ## builds the coordinator executable and places it to ./build/

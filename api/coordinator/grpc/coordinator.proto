@@ -4,8 +4,6 @@ import "google/protobuf/empty.proto";
 
 package coordinator;
 
-option go_package = "github.com/mtvarkosky/go-mapreduce/pkg/api/grpc";
-
 // NewMapTask - message to create new MapTask
 message NewMapTask {
     // input_file - input file for MapTask
