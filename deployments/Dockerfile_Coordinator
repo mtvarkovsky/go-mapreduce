@@ -1,0 +1,32 @@
+# Build
+FROM golang:1.20 as builder
+
+# Install ssh client and git
+RUN apt-get update && apt -y --no-install-recommends install openssh-client git
+# Download public key for github.com
+RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+# change all requests to github from https to ssh
+RUN git config --global url."ssh://git@github.com".insteadOf "https://github.com"
+
+WORKDIR /app
+
+# Retrieve application dependencies.
+# This allows the container build to reuse cached dependencies.
+# Expecting to copy go.mod and if present go.sum.
+COPY go.* ./
+RUN --mount=type=ssh go mod download
+
+# Copy local code and run build via make
+COPY . ./
+RUN CGO_ENABLED=0 make build-coordinator
+
+# Final image
+FROM alpine:3.15
+
+WORKDIR /app
+COPY --from=builder /app/build/coordinator .
+COPY --from=builder /app/configs ./configs
+
+RUN chmod +x coordinator
+
+CMD ["/app/coordinator", "start"]

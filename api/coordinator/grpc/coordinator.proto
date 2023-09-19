@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package coordinator;
+
+option go_package = "github.com/mtvarkosky/go-mapreduce/pkg/api/grpc";
+
+// NewMapTask - message to create new MapTask
+message NewMapTask {
+    // input_file - input file for MapTask
+    string input_file = 1;
+}
+
+// MapTask - message representing MapTask
+message MapTask {
+    // id - id of the MapTask
+    string id = 1;
+    // input_file - input file for MapTask
+    string input_file = 2;
+}
+
+// MapTaskResult - result of MapTask execution returned by a Worker
+message MapTaskResult {
+    // task_id - id of the MapTask
+    string task_id = 1;
+    // output_files - intermediate results of the MapTask
+    repeated string output_files = 2;
+    // error - error that have occurred during execution of the MapTask by a Worker
+    optional string error = 3;
+}
+
+// NewReduceTask - message to create new ReduceTask
+message NewReduceTask {
+    // input_files - input files for ReduceTask
+    repeated string input_files = 1;
+}
+
+// ReduceTask - message representing ReduceTask
+message ReduceTask {
+    // id - id of the ReduceTask
+    string id = 1;
+    // input_files - input files for ReduceTask
+    repeated string input_files = 2;
+}
+
+// ReduceTaskResult - result of ReduceTask execution returned by a Worker
+message ReduceTaskResult {
+    // task_id - id of the ReduceTask
+    string task_id = 1;
+    // output_file - result of the ReduceTask
+    string output_file = 2;
+    // error - error that have occurred during execution of the ReduceTask by a Worker
+    optional string error = 3;
+}
+
+service Service {
+    // CreateMapTask - create new MapTask
+    rpc CreateMapTask(NewMapTask) returns (MapTask);
+    // CreateReduceTask - create new ReduceTask
+    rpc CreateReduceTask(NewReduceTask) returns (ReduceTask);
+
+    // GetMapTask - get MapTask for processing
+    rpc GetMapTask(google.protobuf.Empty) returns (MapTask);
+    // GetReduceTask - get ReduceTask for processing
+    rpc GetReduceTask(google.protobuf.Empty) returns (ReduceTask);
+
+    // ReportMapTaskResult - report result of MapTask execution
+    rpc ReportMapTaskResult(MapTaskResult) returns (google.protobuf.Empty);
+    // ReportReduceTaskResult - report result of ReduceTask execution
+    rpc ReportReduceTaskResult(ReduceTaskResult) returns (google.protobuf.Empty);
+
+    // FlushCreatedTasksToWorkers - send created tasks to workers, useful if some or all of the workers died / failed
+    rpc FlushCreatedTasksToWorkers(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
