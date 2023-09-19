@@ -36,7 +36,8 @@ If task execution is successful, the coordinator creates a reduce task and notif
 The reduce task goes through the same steps of processing.
 
 
-Here's a diagram with visualisation for this flow:
+Here's a diagram with visualization for this workflow:
+
 ![design-overview.png](design-overview.png)
 
 
