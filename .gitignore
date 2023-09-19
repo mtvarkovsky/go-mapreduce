@@ -15,8 +15,8 @@ build/*
 # Test data
 test/*
 !test/.gitkeep
-test/data
-!test/data/.gitkeep
+#test/data
+#!test/data/.gitkeep
 
 # Test binary, built with `go test -c`
 *.test
