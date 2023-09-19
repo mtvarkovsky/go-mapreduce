@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/pb"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/events"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/ids"
@@ -53,7 +54,7 @@ func RunCoordinator(
 	if err != nil {
 		log.Fatalf("failed to listen: (%s)", err.Error())
 	}
-	grpc.RegisterServiceServer(grpcServer, coordinatorGrpcServer)
+	pb.RegisterServiceServer(grpcServer, coordinatorGrpcServer)
 	go func() {
 		if err = grpcServer.Serve(lisGrpc); err != nil {
 			log.Fatalf("failed to serve: (%s)", err.Error())

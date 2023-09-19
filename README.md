@@ -37,7 +37,7 @@ The reduce task goes through the same steps of processing.
 
 
 Here's a diagram with visualisation for this flow:
-![basic_overview.png](basic_overview.png)
+![design-overview.png](design-overview.png)
 
 
 The workers are implemented by the end user.
