@@ -35,11 +35,10 @@ services:
     command: ["--replSet", "rs", "--bind_ip_all"]
 
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:management
     ports:
       - "5672:5672"
       - "15672:15672"
-      - "8080:8080"
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 30s
