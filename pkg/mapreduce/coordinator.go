@@ -19,6 +19,7 @@ type (
 
 		FlushCreatedTasksToWorkers(ctx context.Context) error
 
+		TaskFlusher()
 		MapTasksRescheduler()
 		ReduceTasksRescheduler()
 	}

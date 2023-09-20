@@ -43,6 +43,8 @@ func RunCoordinator(
 	}
 
 	coordinator := service.NewCoordinator(ctx, coordinatorCfg, repo, idGen, producer, log)
+
+	go coordinator.TaskFlusher()
 	go coordinator.MapTasksRescheduler()
 	go coordinator.ReduceTasksRescheduler()
 
