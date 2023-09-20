@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  wordcount:
+    image: wordcount:latest
+    restart: always
+    container_name: wordcount
+    depends_on:
+      coordinator:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - wordcount
+    volumes:
+      - ./input:/app/input
+      - ./intermediate:/app/intermediate
+      - ./output:/app/output
+
+  coordinator:
+    image: coordinator:latest
+    restart: always
+    container_name: coordinator
+    ports:
+      - "50051:50051"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - wordcount
+    volumes:
+      - ../test/data:/app/data
+
+  mongodb:
+    image: mongo:latest
+    restart: always
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: >
+        mongosh --eval "try{rs.initiate().ok}catch(e){rs.status().ok}"
+      interval: 30s
+      start_period: 1m
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - wordcount
+    command: ["--replSet", "rs", "--bind_ip_all"]
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 1m
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia/
+    networks:
+      - wordcount
+
+volumes:
+  rabbitmq_data:
+  mongodb_data:
+networks:
+  wordcount:
+    driver: bridge
