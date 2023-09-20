@@ -30,8 +30,6 @@ services:
         condition: service_healthy
     networks:
       - wordcount
-    volumes:
-      - ../test/data:/app/data
 
   mongodb:
     image: mongo:latest
