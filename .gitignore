@@ -18,6 +18,17 @@ test/*
 test/data
 !test/data/.gitkeep
 
+examples/wordcount/input/*
+!examples/wordcount/input/.gitkeep
+!examples/wordcount/input/copypasta.txt
+
+examples/wordcount/intermediate/*
+!examples/wordcount/intermediate/.gitkeep
+
+examples/wordcount/output/*
+!examples/wordcount/output/.gitkeep
+
+
 # Test binary, built with `go test -c`
 *.test
 

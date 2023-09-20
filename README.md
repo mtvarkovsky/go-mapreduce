@@ -48,3 +48,4 @@ The coordinator does not know anything about them besides their identifiers.
 
 The end user decides what to use - a simple Network File System or something more sophisticated like HDFS.
 
+An example of an end user application (word counting) can be found [here](/examples/wordcount). 
