@@ -46,6 +46,19 @@ func NewCoordinator(
 	}
 }
 
+func (c *coordinator) TaskFlusher() {
+	c.log.Infof("init task flusher")
+	ticker := time.NewTicker(c.cfg.AutoFlushTasksEvery)
+
+	for {
+		select {
+		case <-ticker.C:
+			c.log.Infof("flush tasks")
+			go c.FlushCreatedTasksToWorkers(c.ctx)
+		}
+	}
+}
+
 func (c *coordinator) MapTasksRescheduler() {
 	c.log.Infof("init map task rescheduler")
 	ticker := time.NewTicker(c.cfg.CheckForTasksToRescheduleEvery)

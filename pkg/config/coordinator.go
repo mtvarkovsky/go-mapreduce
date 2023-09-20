@@ -10,6 +10,7 @@ import (
 type Coordinator struct {
 	RescheduleInProgressTasksAfter time.Duration `mapstructure:"RESCHEDULE_IN_PROGRESS_TASKS_AFTER"`
 	CheckForTasksToRescheduleEvery time.Duration `mapstructure:"CHECK_FOR_TASKS_TO_RESCHEDULE_EVERY"`
+	AutoFlushTasksEvery            time.Duration `mapstructure:"AUTO_FLUSH_TASKS_EVERY"`
 	RepoType                       string
 	GrpcPort                       int `mapstructure:"GRPC_PORT"`
 }
