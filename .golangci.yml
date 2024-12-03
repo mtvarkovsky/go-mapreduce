@@ -1,0 +1,27 @@
+issues:
+  exclude-use-default: true
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unused
+    - unconvert
+
+output:
+  uniq-by-line: false
+
+run:
+  timeout: 5m

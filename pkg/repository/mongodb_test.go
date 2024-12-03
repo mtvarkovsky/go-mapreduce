@@ -2,12 +2,13 @@ package repository
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
-	"testing"
-	"time"
 )
 
 var (

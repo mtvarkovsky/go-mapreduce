@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/errors"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
@@ -12,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 type (
-	mongoDBTasksRepository struct {
+	MongoDBTasksRepository struct {
 		config config.MongoDB
 		client *mongo.Client
 		log    logger.Logger
@@ -50,7 +51,7 @@ type (
 	}
 )
 
-func NewMongoDBTasksRepository(ctx context.Context, config config.MongoDB, log logger.Logger) (Tasks, error) {
+func NewMongoDBTasksRepository(ctx context.Context, config config.MongoDB, log logger.Logger) (*MongoDBTasksRepository, error) {
 	l := log.Logger("MongoDBRepository")
 	l.Infof("init mongodb repository")
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(config.URI))
@@ -58,7 +59,7 @@ func NewMongoDBTasksRepository(ctx context.Context, config config.MongoDB, log l
 		l.Errorf("can't connect to mongodb at=%s: (%s)", config.URI, err.Error())
 		return nil, fmt.Errorf("can't connect to mongodb at uri=%s: %w", config.URI, err)
 	}
-	repo := &mongoDBTasksRepository{
+	repo := &MongoDBTasksRepository{
 		config: config,
 		client: client,
 		log:    l,
@@ -160,7 +161,7 @@ func fromMongoReduceTask(task mongoReduceTask) mapreduce.ReduceTask {
 	return t
 }
 
-func (r *mongoDBTasksRepository) setup(ctx context.Context) error {
+func (r *MongoDBTasksRepository) setup(ctx context.Context) error {
 	mapCollection := r.getMapTasksCollection()
 	err := r.createIndex(ctx, mapCollection, "id", 1, options.Index().SetUnique(true))
 	if err != nil {
@@ -176,7 +177,7 @@ func (r *mongoDBTasksRepository) setup(ctx context.Context) error {
 	return nil
 }
 
-func (r *mongoDBTasksRepository) createIndex(
+func (r *MongoDBTasksRepository) createIndex(
 	ctx context.Context,
 	collection *mongo.Collection,
 	key string,
@@ -186,7 +187,7 @@ func (r *mongoDBTasksRepository) createIndex(
 	_, err := collection.Indexes().CreateOne(
 		ctx,
 		mongo.IndexModel{
-			Keys:    bson.D{{key, indexType}},
+			Keys:    bson.D{{Key: key, Value: indexType}},
 			Options: opt,
 		},
 	)
@@ -196,15 +197,15 @@ func (r *mongoDBTasksRepository) createIndex(
 	return nil
 }
 
-func (r *mongoDBTasksRepository) getMapTasksCollection() *mongo.Collection {
+func (r *MongoDBTasksRepository) getMapTasksCollection() *mongo.Collection {
 	return r.client.Database(r.config.DBName).Collection(mapTasksCollection)
 }
 
-func (r *mongoDBTasksRepository) getReduceTasksCollection() *mongo.Collection {
+func (r *MongoDBTasksRepository) getReduceTasksCollection() *mongo.Collection {
 	return r.client.Database(r.config.DBName).Collection(reduceTasksCollection)
 }
 
-func (r *mongoDBTasksRepository) Transaction(ctx context.Context, transaction func(ctx context.Context) (any, error)) (any, error) {
+func (r *MongoDBTasksRepository) Transaction(ctx context.Context, transaction func(ctx context.Context) (any, error)) (any, error) {
 	r.log.Infof("start transaction")
 	session, err := r.client.StartSession()
 	if err != nil {
@@ -224,7 +225,7 @@ func (r *mongoDBTasksRepository) Transaction(ctx context.Context, transaction fu
 	return res, nil
 }
 
-func (r *mongoDBTasksRepository) CreateMapTask(ctx context.Context, task mapreduce.MapTask) error {
+func (r *MongoDBTasksRepository) CreateMapTask(ctx context.Context, task mapreduce.MapTask) error {
 	r.log.Infof("create map task with id=%s", task.ID)
 	coll := r.getMapTasksCollection()
 	_, err := coll.InsertOne(ctx, toMongoMapTask(task))
@@ -235,7 +236,7 @@ func (r *mongoDBTasksRepository) CreateMapTask(ctx context.Context, task mapredu
 	return nil
 }
 
-func (r *mongoDBTasksRepository) CreateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error {
+func (r *MongoDBTasksRepository) CreateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error {
 	r.log.Infof("create reduce task with id=%s", task.ID)
 	coll := r.getReduceTasksCollection()
 	_, err := coll.InsertOne(ctx, toMongoReduceTask(task))
@@ -246,18 +247,19 @@ func (r *mongoDBTasksRepository) CreateReduceTask(ctx context.Context, task mapr
 	return nil
 }
 
-func (r *mongoDBTasksRepository) UpdateMapTask(ctx context.Context, task mapreduce.MapTask) error {
+func (r *MongoDBTasksRepository) UpdateMapTask(ctx context.Context, task mapreduce.MapTask) error {
 	r.log.Infof("update map task with id=%s", task.ID)
 	t := toMongoMapTask(task)
 	coll := r.getMapTasksCollection()
-	filter := bson.D{{"id", t.ID}}
-	update := bson.D{{"$set",
-		bson.D{
-			{"status", t.Status},
-			{"in_progress_at", t.InProgressAt},
-			{"failed_at", t.FailedAt},
-			{"done_at", t.DoneAt},
-			{"rescheduled_at", t.RescheduledAt},
+	filter := bson.D{{Key: "id", Value: t.ID}}
+	update := bson.D{{
+		Key: "$set",
+		Value: bson.D{
+			{Key: "status", Value: t.Status},
+			{Key: "in_progress_at", Value: t.InProgressAt},
+			{Key: "failed_at", Value: t.FailedAt},
+			{Key: "done_at", Value: t.DoneAt},
+			{Key: "rescheduled_at", Value: t.RescheduledAt},
 		},
 	}}
 	_, err := coll.UpdateOne(ctx, filter, update)
@@ -271,18 +273,19 @@ func (r *mongoDBTasksRepository) UpdateMapTask(ctx context.Context, task mapredu
 	return nil
 }
 
-func (r *mongoDBTasksRepository) UpdateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error {
+func (r *MongoDBTasksRepository) UpdateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error {
 	r.log.Infof("update reduce task with id=%s", task.ID)
 	t := toMongoReduceTask(task)
 	coll := r.getReduceTasksCollection()
-	filter := bson.D{{"id", task.ID}}
-	update := bson.D{{"$set",
-		bson.D{
-			{"status", t.Status},
-			{"in_progress_at", t.InProgressAt},
-			{"failed_at", t.FailedAt},
-			{"done_at", t.DoneAt},
-			{"rescheduled_at", t.RescheduledAt},
+	filter := bson.D{{Key: "id", Value: task.ID}}
+	update := bson.D{{
+		Key: "$set",
+		Value: bson.D{
+			{Key: "status", Value: t.Status},
+			{Key: "in_progress_at", Value: t.InProgressAt},
+			{Key: "failed_at", Value: t.FailedAt},
+			{Key: "done_at", Value: t.DoneAt},
+			{Key: "rescheduled_at", Value: t.RescheduledAt},
 		},
 	}}
 	_, err := coll.UpdateOne(ctx, filter, update)
@@ -296,7 +299,7 @@ func (r *mongoDBTasksRepository) UpdateReduceTask(ctx context.Context, task mapr
 	return nil
 }
 
-func (r *mongoDBTasksRepository) UpdateMapTasks(
+func (r *MongoDBTasksRepository) UpdateMapTasks(
 	ctx context.Context,
 	ids []string,
 	fields UpdateFields,
@@ -313,7 +316,7 @@ func (r *mongoDBTasksRepository) UpdateMapTasks(
 	if fields.RescheduledAt != nil {
 		upd["rescheduled_at"] = primitive.NewDateTimeFromTime(*fields.RescheduledAt)
 	}
-	update := bson.D{{"$set", upd}}
+	update := bson.D{{Key: "$set", Value: upd}}
 	_, err := coll.UpdateMany(ctx, filter, update)
 	if err != nil {
 		r.log.Warnf("can't update map tasks with ids=%s: (%s)", ids, err.Error())
@@ -325,7 +328,7 @@ func (r *mongoDBTasksRepository) UpdateMapTasks(
 	return nil
 }
 
-func (r *mongoDBTasksRepository) UpdateReduceTasks(
+func (r *MongoDBTasksRepository) UpdateReduceTasks(
 	ctx context.Context,
 	ids []string,
 	fields UpdateFields,
@@ -342,7 +345,7 @@ func (r *mongoDBTasksRepository) UpdateReduceTasks(
 	if fields.RescheduledAt != nil {
 		upd["rescheduled_at"] = primitive.NewDateTimeFromTime(*fields.RescheduledAt)
 	}
-	update := bson.D{{"$set", upd}}
+	update := bson.D{{Key: "$set", Value: upd}}
 	_, err := coll.UpdateMany(ctx, filter, update)
 	if err != nil {
 		r.log.Warnf("can't update reduce tasks with ids=%s: (%s)", ids, err.Error())
@@ -354,10 +357,10 @@ func (r *mongoDBTasksRepository) UpdateReduceTasks(
 	return nil
 }
 
-func (r *mongoDBTasksRepository) GetMapTask(ctx context.Context, id string) (mapreduce.MapTask, error) {
+func (r *MongoDBTasksRepository) GetMapTask(ctx context.Context, id string) (mapreduce.MapTask, error) {
 	r.log.Infof("get map task with id=%s", id)
 	coll := r.getMapTasksCollection()
-	filter := bson.D{{"id", id}}
+	filter := bson.D{{Key: "id", Value: id}}
 	var task mongoMapTask
 	err := coll.FindOne(ctx, filter).Decode(&task)
 	if err != nil {
@@ -370,10 +373,10 @@ func (r *mongoDBTasksRepository) GetMapTask(ctx context.Context, id string) (map
 	return fromMongoMapTask(task), nil
 }
 
-func (r *mongoDBTasksRepository) GetReduceTask(ctx context.Context, id string) (mapreduce.ReduceTask, error) {
+func (r *MongoDBTasksRepository) GetReduceTask(ctx context.Context, id string) (mapreduce.ReduceTask, error) {
 	r.log.Infof("get reduce task with id=%s", id)
 	coll := r.getReduceTasksCollection()
-	filter := bson.D{{"id", id}}
+	filter := bson.D{{Key: "id", Value: id}}
 	var task mongoReduceTask
 	err := coll.FindOne(ctx, filter).Decode(&task)
 	if err != nil {
@@ -401,7 +404,7 @@ func toMongoDBFilter(filter Filter) (bson.M, []*options.FindOptions, error) {
 			return bson.M{}, nil, err
 		}
 		direction := toMongoDBOrderDirection(filter.OrderDirection)
-		opts = append(opts, options.Find().SetSort(bson.D{{order, direction}}))
+		opts = append(opts, options.Find().SetSort(bson.D{{Key: order, Value: direction}}))
 	}
 
 	if filter.Limit != nil {
@@ -443,10 +446,15 @@ func toMongoDBOrderDirection(orderDirection *OrderDirection) int {
 	}
 }
 
-func (r *mongoDBTasksRepository) QueryMapTasks(ctx context.Context, filter Filter) ([]mapreduce.MapTask, error) {
+func (r *MongoDBTasksRepository) QueryMapTasks(ctx context.Context, filter Filter) ([]mapreduce.MapTask, error) {
 	r.log.Infof("query map tasks with filter=%s", filter)
 	coll := r.getMapTasksCollection()
 	fltr, opts, err := toMongoDBFilter(filter)
+	if err != nil {
+		r.log.Warnf("can't query map tasks with filter=%s, can't convert filter: (%s)", filter, err.Error())
+		return nil, fmt.Errorf("can't query map tasks: %w", errors.ErrInternal)
+	}
+
 	cursor, err := coll.Find(
 		ctx,
 		fltr,
@@ -469,10 +477,15 @@ func (r *mongoDBTasksRepository) QueryMapTasks(ctx context.Context, filter Filte
 	return tsks, nil
 }
 
-func (r *mongoDBTasksRepository) QueryReduceTasks(ctx context.Context, filter Filter) ([]mapreduce.ReduceTask, error) {
+func (r *MongoDBTasksRepository) QueryReduceTasks(ctx context.Context, filter Filter) ([]mapreduce.ReduceTask, error) {
 	r.log.Infof("query reduce tasks with filter=%s", filter)
 	coll := r.getReduceTasksCollection()
 	fltr, opts, err := toMongoDBFilter(filter)
+	if err != nil {
+		r.log.Warnf("can't query reduce tasks with filter=%s, can't convert filter: (%s)", filter, err.Error())
+		return nil, fmt.Errorf("can't query reduce tasks: %w", errors.ErrInternal)
+	}
+
 	cursor, err := coll.Find(
 		ctx,
 		fltr,

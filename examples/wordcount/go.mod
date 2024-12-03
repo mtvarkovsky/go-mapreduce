@@ -1,9 +1,9 @@
 module github.com/mtvarkovsky/go-mapreduce/examples/wordcount
 
-go 1.20
+go 1.23
 
 require (
-	github.com/mtvarkovsky/go-mapreduce v0.0.0-20230919194348-912f76b3fee8
+	github.com/mtvarkovsky/go-mapreduce v0.0.0-20230921143802-f737b9d459be
 	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 )

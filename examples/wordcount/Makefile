@@ -4,4 +4,4 @@ docker-build-wordcount: ## build wordcount docker image
 
 .PHONY: docker-run-wodcount
 docker-run-wordcount: ## runs wordcount docker image
-	docker-compose up
+	docker compose up

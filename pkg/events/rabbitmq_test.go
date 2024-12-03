@@ -2,12 +2,13 @@ package events
 
 import (
 	"context"
+	"testing"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
 	"github.com/stretchr/testify/assert"
-	"github.com/testcontainers/testcontainers-go"
+	testcontainers "github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"testing"
 )
 
 func newRabbitMQContainer(t *testing.T) (testcontainers.Container, config.RabbitMQ) {

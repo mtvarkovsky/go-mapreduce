@@ -1,8 +1,14 @@
+//go:generate mockgen -destination mocks/repository_mock.go -package mocks . Repository
+//go:generate mockgen -destination mocks/producer_mock.go -package mocks . Producer
+//go:generate mockgen -destination mocks/generator_mock.go -package mocks . IDGenerator
+
 package service
 
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/errors"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/events"
@@ -12,16 +18,42 @@ import (
 	"github.com/mtvarkovsky/go-mapreduce/pkg/repository"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/utils"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type (
-	coordinator struct {
+	Repository interface {
+		Transaction(ctx context.Context, transaction func(ctx context.Context) (any, error)) (any, error)
+
+		CreateMapTask(ctx context.Context, task mapreduce.MapTask) error
+		CreateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error
+
+		UpdateMapTask(ctx context.Context, task mapreduce.MapTask) error
+		UpdateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error
+
+		UpdateMapTasks(ctx context.Context, ids []string, fields repository.UpdateFields) error
+		UpdateReduceTasks(ctx context.Context, ids []string, fields repository.UpdateFields) error
+
+		GetMapTask(ctx context.Context, id string) (mapreduce.MapTask, error)
+		GetReduceTask(ctx context.Context, id string) (mapreduce.ReduceTask, error)
+
+		QueryMapTasks(ctx context.Context, filter repository.Filter) ([]mapreduce.MapTask, error)
+		QueryReduceTasks(ctx context.Context, filter repository.Filter) ([]mapreduce.ReduceTask, error)
+	}
+
+	Producer interface {
+		Produce(ctx context.Context, event events.Event) error
+	}
+
+	IDGenerator interface {
+		GetID(ctx context.Context, entityType ids.EntityType) (string, error)
+	}
+
+	Coordinator struct {
 		ctx      context.Context
 		cfg      config.Coordinator
-		repo     repository.Tasks
-		idGen    ids.IDGenerator
-		producer events.Producer
+		repo     Repository
+		idGen    IDGenerator
+		producer Producer
 		log      logger.Logger
 	}
 )
@@ -29,14 +61,14 @@ type (
 func NewCoordinator(
 	ctx context.Context,
 	config config.Coordinator,
-	repo repository.Tasks,
-	idGen ids.IDGenerator,
-	producer events.Producer,
+	repo Repository,
+	idGen IDGenerator,
+	producer Producer,
 	log logger.Logger,
-) mapreduce.Coordinator {
+) *Coordinator {
 	l := log.Logger("CoordinatorService")
-	l.Infof("init coordinator service")
-	return &coordinator{
+	l.Infof("init Coordinator service")
+	return &Coordinator{
 		ctx:      ctx,
 		cfg:      config,
 		repo:     repo,
@@ -46,46 +78,37 @@ func NewCoordinator(
 	}
 }
 
-func (c *coordinator) TaskFlusher() {
+func (c *Coordinator) TaskFlusher() {
 	c.log.Infof("init task flusher")
 	ticker := time.NewTicker(c.cfg.AutoFlushTasksEvery)
 
-	for {
-		select {
-		case <-ticker.C:
-			c.log.Infof("flush tasks")
-			go c.FlushCreatedTasksToWorkers(c.ctx)
-		}
+	for range ticker.C {
+		c.log.Infof("flush tasks")
+		go c.FlushCreatedTasksToWorkers(c.ctx)
 	}
 }
 
-func (c *coordinator) MapTasksRescheduler() {
+func (c *Coordinator) MapTasksRescheduler() {
 	c.log.Infof("init map task rescheduler")
 	ticker := time.NewTicker(c.cfg.CheckForTasksToRescheduleEvery)
 
-	for {
-		select {
-		case <-ticker.C:
-			c.log.Infof("reschedule map tasks")
-			go c.rescheduleMapTasks()
-		}
+	for range ticker.C {
+		c.log.Infof("reschedule map tasks")
+		go c.rescheduleMapTasks()
 	}
 }
 
-func (c *coordinator) ReduceTasksRescheduler() {
+func (c *Coordinator) ReduceTasksRescheduler() {
 	c.log.Infof("init reduce task rescheduler")
 	ticker := time.NewTicker(c.cfg.CheckForTasksToRescheduleEvery)
 
-	for {
-		select {
-		case <-ticker.C:
-			c.log.Infof("reschedule reduce tasks")
-			go c.rescheduleReduceTasks()
-		}
+	for range ticker.C {
+		c.log.Infof("reschedule reduce tasks")
+		go c.rescheduleReduceTasks()
 	}
 }
 
-func (c *coordinator) rescheduleMapTasks() error {
+func (c *Coordinator) rescheduleMapTasks() error {
 	c.log.Infof("try to reschedule map tasks")
 	transaction := func(ctx context.Context) (any, error) {
 		sessionCtx, ok := ctx.(mongo.SessionContext)
@@ -158,7 +181,7 @@ func (c *coordinator) rescheduleMapTasks() error {
 	return nil
 }
 
-func (c *coordinator) rescheduleReduceTasks() error {
+func (c *Coordinator) rescheduleReduceTasks() error {
 	c.log.Infof("try to reschedule reduce tasks")
 	transaction := func(ctx context.Context) (any, error) {
 		sessionCtx, ok := ctx.(mongo.SessionContext)
@@ -231,7 +254,7 @@ func (c *coordinator) rescheduleReduceTasks() error {
 	return nil
 }
 
-func (c *coordinator) CreateMapTask(ctx context.Context, inputFile string) (mapreduce.MapTask, error) {
+func (c *Coordinator) CreateMapTask(ctx context.Context, inputFile string) (mapreduce.MapTask, error) {
 	c.log.Infof("create map task for file=%s", inputFile)
 	now := time.Now()
 	id, err := c.idGen.GetID(ctx, ids.MapTask)
@@ -257,7 +280,7 @@ func (c *coordinator) CreateMapTask(ctx context.Context, inputFile string) (mapr
 	return task, nil
 }
 
-func (c *coordinator) CreateReduceTask(ctx context.Context, inputFiles ...string) (mapreduce.ReduceTask, error) {
+func (c *Coordinator) CreateReduceTask(ctx context.Context, inputFiles ...string) (mapreduce.ReduceTask, error) {
 	c.log.Infof("create reduce task for files=%s", inputFiles)
 	now := time.Now()
 	id, err := c.idGen.GetID(ctx, ids.ReduceTask)
@@ -283,7 +306,7 @@ func (c *coordinator) CreateReduceTask(ctx context.Context, inputFiles ...string
 	return task, nil
 }
 
-func (c *coordinator) GetMapTask(ctx context.Context) (mapreduce.MapTask, error) {
+func (c *Coordinator) GetMapTask(ctx context.Context) (mapreduce.MapTask, error) {
 	c.log.Infof("get map task for processing")
 	tasks, err := c.repo.QueryMapTasks(
 		ctx,
@@ -317,7 +340,7 @@ func (c *coordinator) GetMapTask(ctx context.Context) (mapreduce.MapTask, error)
 	return task, nil
 }
 
-func (c *coordinator) GetReduceTask(ctx context.Context) (mapreduce.ReduceTask, error) {
+func (c *Coordinator) GetReduceTask(ctx context.Context) (mapreduce.ReduceTask, error) {
 	c.log.Infof("get reduce task for processing")
 	tasks, err := c.repo.QueryReduceTasks(
 		ctx,
@@ -351,7 +374,7 @@ func (c *coordinator) GetReduceTask(ctx context.Context) (mapreduce.ReduceTask, 
 	return task, nil
 }
 
-func (c *coordinator) ReportMapTask(ctx context.Context, taskResult mapreduce.MapTaskResult) error {
+func (c *Coordinator) ReportMapTask(ctx context.Context, taskResult mapreduce.MapTaskResult) error {
 	c.log.Infof("try to report map task result with task id=%s", taskResult.TaskID)
 	transaction := func(ctx context.Context) (any, error) {
 		sessionCtx, ok := ctx.(mongo.SessionContext)
@@ -414,7 +437,7 @@ func (c *coordinator) ReportMapTask(ctx context.Context, taskResult mapreduce.Ma
 	return nil
 }
 
-func (c *coordinator) ReportReduceTask(ctx context.Context, taskResult mapreduce.ReduceTaskResult) error {
+func (c *Coordinator) ReportReduceTask(ctx context.Context, taskResult mapreduce.ReduceTaskResult) error {
 	c.log.Infof("try to report reduce task result with task id=%s", taskResult.TaskID)
 	c.log.Infof("get reduce task with id=%s to report result", taskResult.TaskID)
 	task, err := c.repo.GetReduceTask(ctx, taskResult.TaskID)
@@ -453,7 +476,7 @@ func (c *coordinator) ReportReduceTask(ctx context.Context, taskResult mapreduce
 	return nil
 }
 
-func (c *coordinator) FlushCreatedTasksToWorkers(ctx context.Context) error {
+func (c *Coordinator) FlushCreatedTasksToWorkers(ctx context.Context) error {
 	c.log.Infof("get map tasks to resend to workers")
 	mapTasks, err := c.repo.QueryMapTasks(
 		ctx,

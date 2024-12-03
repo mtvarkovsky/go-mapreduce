@@ -3,30 +3,27 @@ package service
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/events"
-	mockEvents "github.com/mtvarkovsky/go-mapreduce/pkg/events/mocks"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/ids"
-	mockIDs "github.com/mtvarkovsky/go-mapreduce/pkg/ids/mocks"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/repository"
-	mockTasks "github.com/mtvarkovsky/go-mapreduce/pkg/repository/mocks"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/service/mocks"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/utils"
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/mongo"
-	"testing"
-	"time"
 )
 
 type (
 	testCoordinator struct {
-		*coordinator
-		mockRepo     *mockTasks.MockTasks
-		mockProducer *mockEvents.MockProducer
-		mockIDGen    *mockIDs.MockIDGenerator
-		sessionCtx   mongo.SessionContext
+		*Coordinator
+		mockRepo     *mocks.MockRepository
+		mockProducer *mocks.MockProducer
+		mockIDGen    *mocks.MockIDGenerator
 	}
 )
 
@@ -52,12 +49,12 @@ func newTestCoordinator(t *testing.T) *testCoordinator {
 		CheckForTasksToRescheduleEvery: time.Microsecond,
 		RescheduleInProgressTasksAfter: time.Minute * 10,
 	}
-	mockRepo := mockTasks.NewMockTasks(ctrl)
-	mockProducer := mockEvents.NewMockProducer(ctrl)
-	mockIDGen := mockIDs.NewMockIDGenerator(ctrl)
-	crdntr := NewCoordinator(context.Background(), cfg, mockRepo, mockIDGen, mockProducer, logger.NewTestZapLogger()).(*coordinator)
+	mockRepo := mocks.NewMockRepository(ctrl)
+	mockProducer := mocks.NewMockProducer(ctrl)
+	mockIDGen := mocks.NewMockIDGenerator(ctrl)
+	crdntr := NewCoordinator(context.Background(), cfg, mockRepo, mockIDGen, mockProducer, logger.NewTestZapLogger())
 	return &testCoordinator{
-		coordinator:  crdntr,
+		Coordinator:  crdntr,
 		mockRepo:     mockRepo,
 		mockProducer: mockProducer,
 		mockIDGen:    mockIDGen,

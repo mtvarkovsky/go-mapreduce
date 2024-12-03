@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
+	"sync"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/pb"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
@@ -11,8 +14,6 @@ import (
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/repository"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/service"
-	"net"
-	"sync"
 )
 
 func RunCoordinator(

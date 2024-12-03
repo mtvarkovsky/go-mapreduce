@@ -1,39 +1,14 @@
-//go:generate mockgen -source repository.go -destination mocks/repository_mock.go -package mocks Tasks
-
 package repository
 
 import (
-	"context"
 	"fmt"
-	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
 	"strings"
 	"time"
+
+	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
 )
 
 type (
-	Transaction interface {
-		Transaction(ctx context.Context, transaction func(ctx context.Context) (any, error)) (any, error)
-	}
-
-	Tasks interface {
-		Transaction
-
-		CreateMapTask(ctx context.Context, task mapreduce.MapTask) error
-		CreateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error
-
-		UpdateMapTask(ctx context.Context, task mapreduce.MapTask) error
-		UpdateReduceTask(ctx context.Context, task mapreduce.ReduceTask) error
-
-		UpdateMapTasks(ctx context.Context, ids []string, fields UpdateFields) error
-		UpdateReduceTasks(ctx context.Context, ids []string, fields UpdateFields) error
-
-		GetMapTask(ctx context.Context, id string) (mapreduce.MapTask, error)
-		GetReduceTask(ctx context.Context, id string) (mapreduce.ReduceTask, error)
-
-		QueryMapTasks(ctx context.Context, filter Filter) ([]mapreduce.MapTask, error)
-		QueryReduceTasks(ctx context.Context, filter Filter) ([]mapreduce.ReduceTask, error)
-	}
-
 	Filter struct {
 		IDs            []string
 		Statuses       []mapreduce.TaskStatus

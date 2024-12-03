@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/errors"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
@@ -11,7 +12,7 @@ import (
 )
 
 type (
-	rabbitMQProducer struct {
+	RabbitMQProducer struct {
 		log  logger.Logger
 		cfg  config.RabbitMQ
 		conn *amqp.Connection
@@ -19,7 +20,7 @@ type (
 		q    amqp.Queue
 	}
 
-	rabbitMQConsumer struct {
+	RabbitMQConsumer struct {
 		log    logger.Logger
 		events chan Event
 		done   chan bool
@@ -49,7 +50,7 @@ func getQueue(channel *amqp.Channel, config config.RabbitMQ) (amqp.Queue, error)
 	)
 }
 
-func NewRabbitMQProducer(config config.RabbitMQ, log logger.Logger) (Producer, error) {
+func NewRabbitMQProducer(config config.RabbitMQ, log logger.Logger) (*RabbitMQProducer, error) {
 	l := log.Logger("RabbitMQProducer")
 	l.Infof("start new event producer")
 	conn, err := getConnection(config)
@@ -67,7 +68,7 @@ func NewRabbitMQProducer(config config.RabbitMQ, log logger.Logger) (Producer, e
 		l.Errorf("can't get rabbitmq queue=%s: (%s)", config.QueueName, err.Error())
 		return nil, fmt.Errorf("can't get rabbitqm queue=%s: %w", config.QueueName, err)
 	}
-	p := &rabbitMQProducer{
+	p := &RabbitMQProducer{
 		log:  l,
 		conn: conn,
 		ch:   ch,
@@ -77,7 +78,7 @@ func NewRabbitMQProducer(config config.RabbitMQ, log logger.Logger) (Producer, e
 	return p, nil
 }
 
-func (p *rabbitMQProducer) Produce(ctx context.Context, event Event) error {
+func (p *RabbitMQProducer) Produce(ctx context.Context, event Event) error {
 	p.log.Infof("produce event=%s", event.Type)
 	evnt, err := json.Marshal(event)
 	if err != nil {
@@ -102,7 +103,7 @@ func (p *rabbitMQProducer) Produce(ctx context.Context, event Event) error {
 	return nil
 }
 
-func (p *rabbitMQProducer) Close(ctx context.Context) error {
+func (p *RabbitMQProducer) Close(ctx context.Context) error {
 	p.log.Infof("stop event producer")
 	err := p.conn.Close()
 	if err != nil {
@@ -112,7 +113,7 @@ func (p *rabbitMQProducer) Close(ctx context.Context) error {
 	return nil
 }
 
-func NewRabbitMQConsumer(config config.RabbitMQ, log logger.Logger) (Consumer, error) {
+func NewRabbitMQConsumer(config config.RabbitMQ, log logger.Logger) (*RabbitMQConsumer, error) {
 	l := log.Logger("RabbitMQConsumer")
 	l.Infof("start new event pconsumer")
 	conn, err := getConnection(config)
@@ -130,7 +131,7 @@ func NewRabbitMQConsumer(config config.RabbitMQ, log logger.Logger) (Consumer, e
 		l.Errorf("can't get rabbitmq queue=%s: (%s)", config.QueueName, err.Error())
 		return nil, fmt.Errorf("can't get rabbitqm queue=%s: %w", config.QueueName, err)
 	}
-	c := &rabbitMQConsumer{
+	c := &RabbitMQConsumer{
 		log:    l,
 		conn:   conn,
 		ch:     ch,
@@ -142,7 +143,7 @@ func NewRabbitMQConsumer(config config.RabbitMQ, log logger.Logger) (Consumer, e
 	return c, nil
 }
 
-func (c *rabbitMQConsumer) getEvents() (<-chan amqp.Delivery, error) {
+func (c *RabbitMQConsumer) getEvents() (<-chan amqp.Delivery, error) {
 	return c.ch.Consume(
 		c.q.Name,
 		"",
@@ -154,7 +155,7 @@ func (c *rabbitMQConsumer) getEvents() (<-chan amqp.Delivery, error) {
 	)
 }
 
-func (c *rabbitMQConsumer) processEvents(events <-chan amqp.Delivery) {
+func (c *RabbitMQConsumer) processEvents(events <-chan amqp.Delivery) {
 	c.log.Infof("start processing events")
 	for {
 		select {
@@ -173,7 +174,7 @@ func (c *rabbitMQConsumer) processEvents(events <-chan amqp.Delivery) {
 	}
 }
 
-func (c *rabbitMQConsumer) toEvent(e amqp.Delivery) (Event, error) {
+func (c *RabbitMQConsumer) toEvent(e amqp.Delivery) (Event, error) {
 	var event Event
 	err := json.Unmarshal(e.Body, &event)
 	if err != nil {
@@ -182,7 +183,7 @@ func (c *rabbitMQConsumer) toEvent(e amqp.Delivery) (Event, error) {
 	return event, nil
 }
 
-func (c *rabbitMQConsumer) Consume() (<-chan Event, error) {
+func (c *RabbitMQConsumer) Consume() (<-chan Event, error) {
 	c.log.Infof("start consuming events")
 	events, err := c.getEvents()
 	if err != nil {
@@ -193,7 +194,7 @@ func (c *rabbitMQConsumer) Consume() (<-chan Event, error) {
 	return c.events, nil
 }
 
-func (c *rabbitMQConsumer) Close() error {
+func (c *RabbitMQConsumer) Close() error {
 	c.log.Infof("stop consuming events")
 	c.done <- true
 	close(c.events)

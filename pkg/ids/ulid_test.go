@@ -2,8 +2,9 @@ package ids
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestULIDIDGenerator_GetID_MapTask(t *testing.T) {

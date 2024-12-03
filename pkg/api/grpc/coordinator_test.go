@@ -3,14 +3,16 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/mocks"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/pb"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce"
-	"github.com/mtvarkovsky/go-mapreduce/pkg/mapreduce/mocks"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"testing"
-	"time"
 )
 
 type (
@@ -51,11 +53,11 @@ func TestCoordinatorServer_CreateMapTask(t *testing.T) {
 	crdntr.mockCoordinator.EXPECT().
 		CreateMapTask(gomock.Any(), testMapTask.InputFile).
 		Return(testMapTask, nil)
-	task, err := crdntr.CreateMapTask(context.Background(), &NewMapTask{
+	task, err := crdntr.CreateMapTask(context.Background(), &pb.NewMapTask{
 		InputFile: testMapTask.InputFile,
 	})
 	assert.NoError(t, err)
-	expected := &MapTask{
+	expected := &pb.MapTask{
 		Id:        testMapTask.ID,
 		InputFile: testMapTask.InputFile,
 	}
@@ -67,11 +69,11 @@ func TestCoordinatorServer_CreateReduceTask(t *testing.T) {
 	crdntr.mockCoordinator.EXPECT().
 		CreateReduceTask(gomock.Any(), testReduceTask.InputFiles).
 		Return(testReduceTask, nil)
-	task, err := crdntr.CreateReduceTask(context.Background(), &NewReduceTask{
+	task, err := crdntr.CreateReduceTask(context.Background(), &pb.NewReduceTask{
 		InputFiles: testReduceTask.InputFiles,
 	})
 	assert.NoError(t, err)
-	expected := &ReduceTask{
+	expected := &pb.ReduceTask{
 		Id:         testReduceTask.ID,
 		InputFiles: testReduceTask.InputFiles,
 	}
@@ -85,7 +87,7 @@ func TestCoordinatorServer_GetMapTask(t *testing.T) {
 		Return(testMapTask, nil)
 	task, err := crdntr.GetMapTask(context.Background(), &emptypb.Empty{})
 	assert.NoError(t, err)
-	expected := &MapTask{
+	expected := &pb.MapTask{
 		Id:        testMapTask.ID,
 		InputFile: testMapTask.InputFile,
 	}
@@ -99,7 +101,7 @@ func TestCoordinatorServer_GetReduceTask(t *testing.T) {
 		Return(testReduceTask, nil)
 	task, err := crdntr.GetReduceTask(context.Background(), &emptypb.Empty{})
 	assert.NoError(t, err)
-	expected := &ReduceTask{
+	expected := &pb.ReduceTask{
 		Id:         testReduceTask.ID,
 		InputFiles: testReduceTask.InputFiles,
 	}
@@ -115,7 +117,7 @@ func TestCoordinatorServer_ReportMapTaskResult(t *testing.T) {
 				Error:  fmt.Errorf("map task error"),
 			},
 		}).Return(nil)
-	_, err := crdntr.ReportMapTaskResult(context.Background(), &MapTaskResult{
+	_, err := crdntr.ReportMapTaskResult(context.Background(), &pb.MapTaskResult{
 		TaskId:      testMapTask.ID,
 		OutputFiles: []string{},
 		Error:       utils.Pointer("map task error"),
@@ -133,7 +135,7 @@ func TestCoordinatorServer_ReportReduceTaskResult(t *testing.T) {
 				Error:      nil,
 			},
 		}).Return(nil)
-	_, err := crdntr.ReportReduceTaskResult(context.Background(), &ReduceTaskResult{
+	_, err := crdntr.ReportReduceTaskResult(context.Background(), &pb.ReduceTaskResult{
 		TaskId:     testReduceTask.ID,
 		OutputFile: "output.file",
 		Error:      nil,

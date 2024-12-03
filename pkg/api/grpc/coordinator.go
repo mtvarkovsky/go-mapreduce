@@ -1,8 +1,11 @@
+//go:generate mockgen -source coordinator.go -destination mocks/coordinator_mock.go -package mocks Coordinator
+
 package grpc
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/mtvarkovsky/go-mapreduce/pkg/api/grpc/pb"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/errors"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
@@ -12,13 +15,28 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type coordinatorServer struct {
-	pb.UnimplementedServiceServer
-	coordinator mapreduce.Coordinator
-	log         logger.Logger
-}
+type (
+	Coordinator interface {
+		CreateMapTask(ctx context.Context, inputFile string) (mapreduce.MapTask, error)
+		CreateReduceTask(ctx context.Context, inputFiles ...string) (mapreduce.ReduceTask, error)
 
-func NewCoordinator(coordinator mapreduce.Coordinator, log logger.Logger) pb.ServiceServer {
+		GetMapTask(ctx context.Context) (mapreduce.MapTask, error)
+		GetReduceTask(ctx context.Context) (mapreduce.ReduceTask, error)
+
+		ReportMapTask(ctx context.Context, taskResult mapreduce.MapTaskResult) error
+		ReportReduceTask(ctx context.Context, taskResult mapreduce.ReduceTaskResult) error
+
+		FlushCreatedTasksToWorkers(ctx context.Context) error
+	}
+
+	coordinatorServer struct {
+		pb.UnimplementedServiceServer
+		coordinator Coordinator
+		log         logger.Logger
+	}
+)
+
+func NewCoordinator(coordinator Coordinator, log logger.Logger) pb.ServiceServer {
 	return &coordinatorServer{
 		coordinator: coordinator,
 		log:         log.Logger("CoordinatorGrpcServer"),

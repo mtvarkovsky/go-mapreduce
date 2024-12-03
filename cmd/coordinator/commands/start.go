@@ -2,11 +2,12 @@ package commands
 
 import (
 	"context"
-	"github.com/mtvarkovsky/go-mapreduce/pkg/app"
-	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/mtvarkovsky/go-mapreduce/pkg/app"
+	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 
 	"github.com/spf13/cobra"
 )

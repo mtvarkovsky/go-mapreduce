@@ -3,14 +3,15 @@ package repository
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/config"
 	"github.com/mtvarkovsky/go-mapreduce/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/mongodb"
-	"testing"
-	"time"
 )
 
 type (
@@ -51,7 +52,7 @@ func (m UpdateFieldsMatcher) String() string {
 	return fmt.Sprintf("UpdateFields{Status=%s, RescheduleAt=%s}", m.Status, m.RescheduledAt)
 }
 
-func NewTestMongoDBTasksRepository(t *testing.T) (Tasks, *mongodb.MongoDBContainer) {
+func NewTestMongoDBTasksRepository(t *testing.T) (*MongoDBTasksRepository, *mongodb.MongoDBContainer) {
 	ctx := context.Background()
 	mongodbContainer, err := mongodb.RunContainer(
 		ctx,

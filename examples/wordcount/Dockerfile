@@ -1,5 +1,5 @@
 # Build
-FROM golang:1.20 as builder
+FROM golang:1.23 AS builder
 
 # Install ssh client and git
 RUN apt-get update && apt -y --no-install-recommends install openssh-client git

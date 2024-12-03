@@ -23,6 +23,11 @@ import (
 )
 
 type (
+	consumer interface {
+		Consume() (<-chan events.Event, error)
+		Close() error
+	}
+
 	fileScanner struct {
 		log           logger.Logger
 		wg            *sync.WaitGroup
@@ -38,7 +43,7 @@ type (
 		inputFilesDir        string
 		intermediateFilesDir string
 		coordinator          pb.ServiceClient
-		consumer             events.Consumer
+		consumer             consumer
 		done                 <-chan bool
 	}
 
@@ -48,7 +53,7 @@ type (
 		intermediateFilesDir string
 		outputFilesDir       string
 		coordinator          pb.ServiceClient
-		consumer             events.Consumer
+		consumer             consumer
 		done                 <-chan bool
 	}
 )
@@ -131,7 +136,7 @@ func newMapWorker(
 	inputFilesDir string,
 	intermediateFilesDir string,
 	coordinator pb.ServiceClient,
-	consumer events.Consumer,
+	consumer consumer,
 	done chan bool,
 ) *mapWorker {
 	return &mapWorker{
@@ -241,7 +246,7 @@ func newReduceWorker(
 	intermediateFilesDir string,
 	outputFilesDir string,
 	coordinator pb.ServiceClient,
-	consumer events.Consumer,
+	consumer consumer,
 	done chan bool,
 ) *reduceWorker {
 	return &reduceWorker{
@@ -397,7 +402,7 @@ func main() {
 
 	coordinatorClient := pb.NewServiceClient(grpcConn)
 
-	consumer, err := events.NewRabbitMQConsumer(consumerCfg, log)
+	cnsmr, err := events.NewRabbitMQConsumer(consumerCfg, log)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -410,10 +415,10 @@ func main() {
 	fs := newFileScanner(log, wg, inputFilesDir, coordinatorClient, doneFileScanner)
 
 	doneMapWorker := make(chan bool)
-	mw := newMapWorker(log, wg, inputFilesDir, intermediateFilesDir, coordinatorClient, consumer, doneMapWorker)
+	mw := newMapWorker(log, wg, inputFilesDir, intermediateFilesDir, coordinatorClient, cnsmr, doneMapWorker)
 
 	doneReduceWorker := make(chan bool)
-	rw := newReduceWorker(log, wg, inputFilesDir, outputFilesDir, coordinatorClient, consumer, doneReduceWorker)
+	rw := newReduceWorker(log, wg, inputFilesDir, outputFilesDir, coordinatorClient, cnsmr, doneReduceWorker)
 
 	go fs.ScanFiles()
 	go mw.Start()
@@ -421,7 +426,7 @@ func main() {
 
 	<-ctx.Done()
 
-	consumer.Close()
+	cnsmr.Close()
 
 	doneFileScanner <- true
 	doneMapWorker <- true
