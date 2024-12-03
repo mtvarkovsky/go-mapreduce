@@ -127,3 +127,7 @@ fabric.properties
 .bash_history
 .vscode/
 .DS_Store
+
+/deployments/mongodb_data/*
+/deployments/rabbitmq_data/*
+/examples/wordcount/mongodb_data/*
